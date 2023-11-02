@@ -1,6 +1,6 @@
 ### Assignment 5: HMMs, Bayesian Networks, and Decisions
 
-#### Due: Wed Nov. 8, 11:59pm. 
+#### Due: Wed Nov. 8, 11:59pm.
 
 #### 100 points.
 
@@ -8,25 +8,27 @@ For questions 1 and 4, please include a PDF with your answers.
 
 Please also include a submission.py that can run your code for questions 2 and 3.
 
-Question 1: Our Mars rover has been out collecting samples, and it 
-needs to return to the charging station as quickly as possible. 
+### Question 1:
+
+Our Mars rover has been out collecting samples, and it
+needs to return to the charging station as quickly as possible.
 
 It knows that over rocky terrain it can go 2 km/h. Over sandy terrain it can go 3 km/h,
-and over smooth terrain it can go 5 km/h. 
+and over smooth terrain it can go 5 km/h.
 
 There are three routes it might choose from. Unfortunately, our terrain data for the three routes is incomplete,
 so we only have estimates.
 
 Route 1 is 2 km long. There is a 20% chance it is sandy, 30% chance it is smooth, and a 50% chance it is rocky.
 
-Route 2 is 1.8 km long. There is a 40% chance it is sandy, a 20% chance it is smooth, and a 40 % chance it is rocky. 
+Route 2 is 1.8 km long. There is a 40% chance it is sandy, a 20% chance it is smooth, and a 40 % chance it is rocky.
 
 Route 3 is 3.1 km long. There is a 50% chance it is sandy, a 40% chance it is smooth, and a 10% chance it is rocky.
 
 **(10 points)** Which route should we pick? Show your work.
 
 
-We have now found out some additional information. 
+We have now found out some additional information.
 
 Route 1 contains a crater. If the wall of the crater is intact, we can go through it. If the wall has been damaged, we will need to go around, which will add 45 minutes to our journey. There is a 30% chance that the wall is damaged.
 
@@ -35,13 +37,28 @@ Route 2 contains a bridge. If that bridge is damaged, we will need to repair it,
 **(10 points)** Now which route should we pick? Show your work.
 
 
-**(10 points)** Now suppose that we can use a satellite to find out whether the terrain in route 3 is smooth. 
+**(10 points)** Now suppose that we can use a satellite to find out whether the terrain in route 3 is smooth.
 Is this helpful? What is the value of this information? Expressed differently, how long are we
 willing to wait for this information from the satellite?
 
+Having a satellite find out whether the terrain is route 3 is smooth or not would be helpful since that will help us determine whether we can take route 3 and go through it at the speed of 5 km/h.
+
+However in this problem, charging and retaining the battery is the primary objective.
+So, depending on how much charge is left in the Rover's battery (assuming x time worth of battery for now). We could wait for up to X - 1.48 hours since that's most amount of time we could spend on route 1, which would then become current best path forward if route 3 is rocky.
+
 **(5 points)** Now put this problem into ChatGPT. Is it able to solve it correctly? If not, where does it make mistakes?
 
-Part 2: Hidden Markov Models 
+I believe CHATGPT's math is really off along with it's logic. ChatGPT was still using expected value for the time taken to travel through route 3 but we can calculate the estimated time taken to travel through route 3 by considering the best and the worst case and thus estimate how much time is necessary for route 3.
+
+ChatGPT says the following
+```
+the satellite information indicates that Route 3 is smooth (with a 40% probability), the expected time for Route 3 would be reduced to approximately 0.248 hours (the time for smooth terrain).
+```
+
+It incorrectly calculated the shortest possible time from 0.62 to 0.248.
+
+
+### Part 2: Hidden Markov Models
 
 (Note: this is derived from an assignment in AAAI's Model Assignments workshop)
 
@@ -51,12 +68,12 @@ You'll be building off of the code presented in HMM.py. There's also some includ
 The first set of files are called two-english.trans and two-english.emit. These represent a two-state HMM that was *learned* from English words.
 This HMM has two states: Consonant and Vowel. It's here for practice. Since it only has two states, it's not going to be very accurate.
 
-The first set of files are .trans files. They contain the transition probabilities. two_english models the transition between 'C' for Consonant and 'V' for Vowel in English. There's also a '#' which is 
+The first set of files are .trans files. They contain the transition probabilities. two_english models the transition between 'C' for Consonant and 'V' for Vowel in English. There's also a '#' which is
 used to represent the starting state.
 
 The second set of files are .emit files. These contain the probability of emitting a particular output from that state. These are learned from data, and so contain errors (especially two_english).
 
-The second set of .trans/.emit files are for the Brown corpus. These represent an HMM for recognizing parts of speech. This problem is larger, with 12 states and lots of possible emissions. 
+The second set of .trans/.emit files are for the Brown corpus. These represent an HMM for recognizing parts of speech. This problem is larger, with 12 states and lots of possible emissions.
 
 The last pair of files is ambiguous_sents.obs and ambiguous_sents.tagged.obs. This is what you'll test your Viterbi implementation on.
 
@@ -79,11 +96,11 @@ which generates 20 random observations.
 
 Here are two sample observations:
 
-DET ADJ . ADV ADJ VERB ADP DET ADJ NOUN VERB ADJ NOUN 
+DET ADJ . ADV ADJ VERB ADP DET ADJ NOUN VERB ADJ NOUN
 
-the semi-catatonic , quite several must of an western bridge cannot spectacular analyses 
+the semi-catatonic , quite several must of an western bridge cannot spectacular analyses
 
-DET NOUN ADP NOUN CONJ DET VERB DET NOUN NOUN NOUN ADP DET NOUN 
+DET NOUN ADP NOUN CONJ DET VERB DET NOUN NOUN NOUN ADP DET NOUN
 
 whose light for wall and the learned the hull postmaster trash in his peters
 
@@ -92,6 +109,18 @@ whose light for wall and the learned the hull postmaster trash in his peters
 final state. You should be able to run this like so:
 
 python hmm.py partofspeech.browntags.trained --forward ambiguous_sents.obs
+
+## QUESTION: FOR THE DIMENSIONS OF THE OBSERVATION MATRIX, DO WE SET IT AS NUM_STATES X NUM_OBSERVATIONS OR NUM_OBSERVATIONS X NUM_STATES?
+
+-> They don't but be careful
+
+## QUESTION -> Pseudocode isn't making sense -> s2 is outside the for loop
+
+-> Look at the example
+
+## QUESTION -> Expected output of forward? How do we validate it?
+Check that you're predicting the last token correctly on the tagged.obs file.
+
 
 **(15 points)** Next, implement Viterbi. This tells us, for a sequence of observations, the most likely sequence of states. You should be able to run this like so:
 
@@ -103,12 +132,12 @@ You might find it helpful to use a numpy array to hold the matrix.
 
 You can compare your results to ambiguous_sents.tagged.obs.
 
-Problem 3: Belief networks. 
+### Problem 3: Belief networks.
 
 For this problem, you'll be using the [pgmpy](https://pgmpy.org/) library for probabilistic inference. To begin, you'll want to install this.
 
 To start, take a look at the pgm_alarm.py file, which encodes the earthquake example from class.
-At the bottom is an example of how to query the network to find the probability that John calls given Earthquake. 
+At the bottom is an example of how to query the network to find the probability that John calls given Earthquake.
 
 **(5 points)** 1. Modify this query to determine:
 - the probability of Mary Calling given that John called
@@ -129,7 +158,7 @@ Include each of your queries in carnet.py
 
 **(10 points)**  3. Last, we will add an additional node to the network, called KeyPresent, that indicates whether or not we have the key for the car.
   This is a Categorical variable with two state values, yes and no. The prior for 'yes' is 0.7.
-  
+
   KeyPresent should only affect Starts. Add an edge to starts and update the CPD to indicate that:
 <pre>
 P(starts | gas, ignition, keyPresent) = 0.99
@@ -138,10 +167,10 @@ P(starts | !gas, ignition, keyPresent) = 0.01
 P(starts | gas, ignition, !keyPresent) = 0.01
 P(starts | !gas, !ignition, keyPresent) = 0.01
 P(starts | !gas, ignition, !keyPresent) = 0.01
-P(starts | gas, !ignition, !keyPresent) = 0.01 
+P(starts | gas, !ignition, !keyPresent) = 0.01
 P(starts | !gas, !ignition, !keyPresent) = 0.01
 </pre>
-  
+
 
 **(Problem 4 - grad students only)**
 
@@ -152,7 +181,7 @@ Please read the [executive summary](https://ainowinstitute.org/wp-content/upload
 
 - What are the three dimensions along which Big Tech has an advantage in AI?
 - Why does AI Now think it's important to focus on Big Tech?
-- Priority 1 discusses Algorithmic Accountability. What does this mean? Why is it important to shift responsibility 
+- Priority 1 discusses Algorithmic Accountability. What does this mean? Why is it important to shift responsibility
 for detecting harm on companies themselves?
 - What are the windows for action that are identified? Which do you personally think are the most effective or promising?
 
@@ -167,7 +196,7 @@ content production that is deleterious to young people’s mental and physical h
 
 Do you agree with this assessment? How might we rethink our relationship with AI and with technology in order to avoid these potential negative outcomes?
 
-Now paste this last question into ChatGPT and include its response. How do you compare its output to your own? 
+Now paste this last question into ChatGPT and include its response. How do you compare its output to your own?
 
 
 
