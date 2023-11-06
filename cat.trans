@@ -6,7 +6,7 @@ happy grumpy 0.1
 happy hungry 0.4
 grumpy happy 0.6
 grumpy grumpy 0.3
-grumpy grumpy 0.1
+grumpy hungry 0.1
 hungry happy 0.1
 hungry grumpy 0.6
 hungry hungry 0.3

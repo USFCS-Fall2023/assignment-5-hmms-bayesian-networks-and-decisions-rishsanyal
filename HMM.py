@@ -6,6 +6,7 @@ import codecs
 import os
 import numpy
 
+import pandas as pd
 from pprint import pprint
 
 import sys
@@ -37,7 +38,16 @@ class HMM:
         self.emissions = emissions
 
         self.states = list(self.transitions.keys())
-        self.states.remove("#")
+        self.rounding_number = 4
+        # self.states.remove("#")
+
+    def get_iterable_states(self):
+        temp_states = self.states
+
+        if "#" in temp_states:
+            temp_states.remove("#")
+
+        return temp_states
 
     ## part 1 - you do this. - Done
     @staticmethod
@@ -64,6 +74,7 @@ class HMM:
                     line = line.split()
                     transitions[line[0]].update({line[1]: float(line[2])})
 
+        transitions['#']['#'] = 0
 
         return HMM(transitions, emissions)
 
@@ -100,26 +111,45 @@ class HMM:
     def forward(self, observation):
         ## Implement forward algorithm here.
 
-        num_states = len(self.states)
+        # observation = ["#"] + observation
+
+        states = self.get_iterable_states()
+
+        num_states = len(states)
         num_obs = len(observation)
 
         print("The current observation is : ", observation)
 
         # Initialize the forward matrix
-        forward_matrix = numpy.zeros((num_states, num_obs))
+        forward_matrix = numpy.zeros((num_states + 1, num_obs + 1))
 
-        for i, curr_state in enumerate(self.states):
-            forward_matrix[i][0] = self.transitions['#'][curr_state] * self.emissions[curr_state].get(observation[0], 0)
+        # Initialize the first column of the forward matrix
+        forward_matrix[0][0] = 1 # For the start state
 
-        for i in range(1, num_obs):
-            for state_index, curr_state in enumerate(self.states):
+        for num_state, curr_state in enumerate(states):
+                forward_matrix[num_state + 1][1] = round(self.transitions['#'][curr_state] * self.emissions[curr_state].get(observation[0], 0), self.rounding_number)
+
+        for i in range(2, num_obs + 1):
+            # print("The current observation is : ", observation[i-1])
+            for curr_state_index in range(1, num_states + 1):
+                curr_state = self.states[curr_state_index - 1]
                 curr_sum = 0
-                for j, prev_state in enumerate(self.states):
-                    curr_sum += forward_matrix[j][i-1] * self.transitions[prev_state][curr_state] * self.emissions[curr_state].get(observation[i], 0)
-                forward_matrix[state_index][i] = curr_sum
 
+                for prev_state_index in range(1, num_states + 1):
+                    prev_state = self.states[prev_state_index - 1]
+
+                    curr_sum += (self.emissions[curr_state].get(observation[i-1], 0) * \
+                                self.transitions[prev_state].get(curr_state, None)* \
+                                forward_matrix[prev_state_index][i-1])
+
+
+                forward_matrix[curr_state_index][i] = curr_sum #round(curr_sum, self.rounding_number)
 
         return forward_matrix
+
+    def pretty_print_matrix(self, matrix, cols, rows):
+        df = pd.DataFrame(matrix, columns=cols, index=rows)
+        print(df)
 
     ## you do this: Implement the Viterbi alborithm. Given an Observation (a list of outputs or emissions)
     ## determine the most likely sequence of states.
@@ -130,7 +160,49 @@ class HMM:
         the output sequence, using the Viterbi algorithm.
         """
 
+        states = self.get_iterable_states()
 
+        num_states = len(states)
+        num_obs = len(observation)
+
+        print("The current observation is : ", observation)
+
+        # Initialize the forward matrix
+        forward_matrix = numpy.zeros((num_states + 1, num_obs + 1))
+        backpointers = numpy.zeros((num_states + 1, num_obs + 1))
+
+        # Initialize the first column of the forward matrix
+        forward_matrix[0][0] = 1
+
+        for num_state, curr_state in enumerate(states):
+            forward_matrix[num_state + 1][1] = round(self.transitions['#'][curr_state] * self.emissions[curr_state].get(observation[0], 0), self.rounding_number)
+
+        for i in range(2, num_obs + 1):
+            curr_obs = observation[i - 1]
+
+            for curr_state_index in range(1, num_states + 1):
+                curr_state = self.states[curr_state_index - 1]
+                values = []
+
+                for prev_state_index in range(1, num_states + 1):
+                    prev_state = self.states[prev_state_index - 1]
+
+                    values.append(forward_matrix[prev_state_index][i-1] * self.transitions[prev_state].get(curr_state, 0) * self.emissions[curr_state].get(curr_obs, 0))
+
+                val = max(values)
+                backpointers[curr_state_index][i] = values.index(val) + 1
+
+        best_list = []
+        best = max(forward_matrix[:, num_obs])
+        best_index = list(forward_matrix[:, num_obs]).index(best)
+
+        for i in range(num_obs, 0, -1):
+            best_list.append(states[best_index])
+            best_index = max(backpointers[best_index][i])
+
+        best_list.reverse()
+
+        return best_list
 
 
 if __name__ == '__main__':
@@ -138,7 +210,7 @@ if __name__ == '__main__':
     parser.add_argument("filename", type=str, help="provide the name of the file")
     parser.add_argument("--generate", type=int, help="provide the length of the output sequence", required=False)
     parser.add_argument("--forward", type=str, help="provide the file name of observation", required=False)
-
+    parser.add_argument("--viterbi", type=str, help="provide the file name of observation", required=False)
 
     parser.add_argument("--transitions", help="provide the file name of observation", action='store_true')
     parser.add_argument("--emissions", help="provide the file name of observation", action='store_true')
@@ -170,5 +242,16 @@ if __name__ == '__main__':
                 line = line.strip()
                 if line:
                     line = line.split()
-                    print(model.forward(line))
-                    break
+                    states = model.get_iterable_states()
+                    model.pretty_print_matrix(model.forward(line), ["#"] + line, ["#"] + states )
+                    # break
+
+    if args.viterbi:
+        with open(args.viterbi, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    line = line.split()
+                    states = model.get_iterable_states()
+                    print(model.viterbi(line))
+                    # break
