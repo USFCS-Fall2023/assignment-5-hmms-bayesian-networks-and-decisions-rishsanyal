@@ -145,7 +145,14 @@ class HMM:
 
                 forward_matrix[curr_state_index][i] = curr_sum #round(curr_sum, self.rounding_number)
 
-        return forward_matrix
+        result = self.__get_forward_result(forward_matrix)
+
+        return result
+
+    def __get_forward_result(self, forward_matrix):
+        last_max_observation_index = numpy.argmax(forward_matrix[:, -1])
+        last_max_observation = self.states[last_max_observation_index - 1]
+        return last_max_observation
 
     def pretty_print_matrix(self, matrix, cols, rows):
         df = pd.DataFrame(matrix, columns=cols, index=rows)
@@ -288,8 +295,7 @@ if __name__ == '__main__':
                 if line:
                     line = line.split()
                     states = model.get_iterable_states()
-                    model.pretty_print_matrix(model.forward(line), ["#"] + line, ["#"] + states )
-                    # break
+                    print("Final state is : ", model.forward(line))
 
     if args.viterbi:
         with open(args.viterbi, "r") as f:
@@ -297,6 +303,4 @@ if __name__ == '__main__':
                 line = line.strip()
                 if line:
                     line = line.split()
-                    # states = model.get_iterable_states()
                     print(model.viterbi(line))
-                    # break
