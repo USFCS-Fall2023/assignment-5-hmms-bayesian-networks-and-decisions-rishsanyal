@@ -38,7 +38,7 @@ class HMM:
         self.emissions = emissions
 
         self.states = list(self.transitions.keys())
-        self.rounding_number = 4
+        self.rounding_number = 10
         # self.states.remove("#")
 
     def get_iterable_states(self):
@@ -127,7 +127,7 @@ class HMM:
         forward_matrix[0][0] = 1 # For the start state
 
         for num_state, curr_state in enumerate(states):
-                forward_matrix[num_state + 1][1] = round(self.transitions['#'][curr_state] * self.emissions[curr_state].get(observation[0], 0), self.rounding_number)
+                forward_matrix[num_state + 1][1] = self.transitions['#'][curr_state] * self.emissions[curr_state].get(observation[0], 0)
 
         for i in range(2, num_obs + 1):
             # print("The current observation is : ", observation[i-1])
@@ -175,34 +175,79 @@ class HMM:
         forward_matrix[0][0] = 1
 
         for num_state, curr_state in enumerate(states):
-            forward_matrix[num_state + 1][1] = round(self.transitions['#'][curr_state] * self.emissions[curr_state].get(observation[0], 0), self.rounding_number)
+            forward_matrix[num_state + 1][1] = self.transitions['#'][curr_state] * self.emissions[curr_state].get(observation[0], 0)
+            backpointers[num_state + 1][1] = 0
 
         for i in range(2, num_obs + 1):
-            curr_obs = observation[i - 1]
-
+            # print("The current observation is : ", observation[i-1])
             for curr_state_index in range(1, num_states + 1):
                 curr_state = self.states[curr_state_index - 1]
-                values = []
+                curr_sum = 0
 
                 for prev_state_index in range(1, num_states + 1):
                     prev_state = self.states[prev_state_index - 1]
 
-                    values.append(forward_matrix[prev_state_index][i-1] * self.transitions[prev_state].get(curr_state, 0) * self.emissions[curr_state].get(curr_obs, 0))
+                    curr_sum += (self.emissions[curr_state].get(observation[i-1], 0) * \
+                                self.transitions[prev_state].get(curr_state, None)* \
+                                forward_matrix[prev_state_index][i-1])
 
-                val = max(values)
-                backpointers[curr_state_index][i] = values.index(val) + 1
 
-        best_list = []
-        best = max(forward_matrix[:, num_obs])
-        best_index = list(forward_matrix[:, num_obs]).index(best)
+                forward_matrix[curr_state_index][i] = curr_sum #round(curr_sum, self.rounding_number)
 
-        for i in range(num_obs, 0, -1):
-            best_list.append(states[best_index])
-            best_index = max(backpointers[best_index][i])
+            for curr_state_index in range(1, num_states + 1):
 
-        best_list.reverse()
+                curr_state = self.states[curr_state_index - 1]
 
-        return best_list
+                max_val = 0
+                max_index = 0
+
+                for prev_state_index in range(1, num_states + 1):
+                    prev_state = self.states[prev_state_index - 1]
+
+                    curr_val = (self.emissions[curr_state].get(observation[i-1], 0) * \
+                                self.transitions[prev_state].get(curr_state, None)* \
+                                forward_matrix[prev_state_index][i-1])
+
+                    if curr_val > max_val:
+                        max_val = curr_val
+                        max_index = prev_state_index
+
+                backpointers[curr_state_index][i] = max_index
+
+        return self.__get_viterbi_path(backpointers, observation, forward_matrix)
+
+    def __get_viterbi_path(self, backpointers, observation, forward_matrix):
+        states = self.get_iterable_states()
+        num_obs = len(observation)
+
+        most_likely_path = []
+
+        forward_df = pd.DataFrame(forward_matrix, columns=["#"] + observation, index=["#"] + states)
+        backpointer_df = pd.DataFrame(backpointers, columns=["#"] + observation, index=["#"] + states)
+
+        last_observation = observation[-1]
+
+        last_max_observation_index = forward_df.idxmax()
+
+        most_likely_path.append(last_max_observation_index[last_observation])
+
+        most_likely_path_index_list = []
+
+        most_likely_path_index = backpointer_df.axes[0].get_loc(last_max_observation_index[last_observation])
+
+        most_likely_path_index_list.append(most_likely_path_index)
+
+        for i in range(num_obs, -1, -1):
+            most_likely_path_index = int(backpointer_df.iloc[most_likely_path_index][i])
+            most_likely_path_index_list.append(most_likely_path_index)
+
+        temp_col = ["#"] + states
+
+        for i in most_likely_path_index_list[::-1]:
+            most_likely_path.append(temp_col[i])
+
+        return most_likely_path[3:]
+
 
 
 if __name__ == '__main__':
@@ -252,6 +297,6 @@ if __name__ == '__main__':
                 line = line.strip()
                 if line:
                     line = line.split()
-                    states = model.get_iterable_states()
+                    # states = model.get_iterable_states()
                     print(model.viterbi(line))
                     # break
